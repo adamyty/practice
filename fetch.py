@@ -47,10 +47,21 @@ db = connect(stockid)
 STOCK_DATA = namedtuple("STOCK_DATA", "date capacity turnover open high low close change tx")
 stock = twstock.Stock(str(stockid))
 cursor = db.cursor()
+'''
+fetch last record in db to fetch non-sync data
+date format : (str) 2018-07-23
+'''
+cursor.execute("SELECT * FROM stockdata ORDER BY date DESC")
+last_record_date = cursor.fetchone()[0]
+
 for i in fetch_period:
     print(i)
-    stock_datas = [ STOCK_DATA(a.strftime('%Y-%m-%d'), b, c, d, e, f, g, h, i) for a, b, c, d, e, f, g, h, i in stock.fetch(*i)]
-
+    stock_datas = [ STOCK_DATA(a.strftime('%Y-%m-%d'), b, c, d, e, f, g, h, i) for a, b, c, d, e, f, g, h, i in stock.fetch(*i) \
+                    if last_record_date < a.strftime('%Y-%m-%d')]
+    if stock_datas:
+        print("There are %r datas for %r" %(len(stock_datas), stockid))
+    else:
+        print("There is no newer data (last record date : %r)" %(last_record_date))
     for j in stock_datas:
         print(*j)
 #        print("{0.date}\t".format(j))
@@ -59,7 +70,6 @@ for i in fetch_period:
 #        print()
         cursor.execute("INSERT INTO stockdata (date, capacity, turnover, open, high, low, close, change, tx) VALUES ('{0.date}', {0.capacity}, {0.turnover}, {0.open}, {0.high}, {0.low}, {0.close}, {0.change}, {0.tx})".format(j))
         db.commit()
-
 
 #close db
 if db is not None:
